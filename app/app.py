@@ -390,7 +390,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
               <input type="text" name="stock" placeholder="10" maxlength="10">
             </div>
           </div>
-          <button type="submit" class="btn btn-primary" style="width:auto;padding:8px 22px;">&#128190; Add Product to Db2</button>
+          <button type="submit" class="btn btn-primary" style="width:auto;padding:8px 22px;">&#128190; Add Product to Inventory</button>
         </form>
       </div>
     </div>
@@ -687,7 +687,7 @@ def ui_checkout():
             cur.execute("DELETE FROM cart_items")
             cur.close()
         return redirect(url_for("index",
-                                msg=f"Order placed! Total: ${total:,.2f} — written to IBM Db2 on IBM Power ✓",
+                                msg=f"Order placed! Total: ${total:,.2f} ✓",
                                 type="success"))
     except Exception as exc:
         return redirect(url_for("index", msg=f"Checkout error: {exc}", type="error"))
