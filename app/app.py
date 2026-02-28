@@ -77,14 +77,25 @@ def _q(value):
     return str(value).replace("'", "''")
 
 
+def _create_table_if_not_exists(cur, create_sql, table_name):
+    """Execute CREATE TABLE, ignoring SQL0601N (table already exists in Db2)."""
+    try:
+        cur.execute(create_sql)
+    except Exception as exc:
+        if "SQL0601N" in str(exc) or "-601" in str(exc):
+            pass  # Table already exists — that's fine
+        else:
+            raise
+
+
 def init_db():
     """Initialize the Db2 database schema for the e-cart."""
     with get_db() as conn:
         cur = conn.cursor()
 
         # Products table
-        cur.execute("""
-            CREATE TABLE IF NOT EXISTS products (
+        _create_table_if_not_exists(cur, """
+            CREATE TABLE products (
                 id          INTEGER NOT NULL GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
                 name        VARCHAR(255) NOT NULL,
                 description VARCHAR(1000),
@@ -96,8 +107,8 @@ def init_db():
         """)
 
         # Cart items table
-        cur.execute("""
-            CREATE TABLE IF NOT EXISTS cart_items (
+        _create_table_if_not_exists(cur, """
+            CREATE TABLE cart_items (
                 id         INTEGER NOT NULL GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
                 product_id INTEGER NOT NULL,
                 quantity   INTEGER NOT NULL DEFAULT 1,
@@ -106,8 +117,8 @@ def init_db():
         """)
 
         # Orders table
-        cur.execute("""
-            CREATE TABLE IF NOT EXISTS orders (
+        _create_table_if_not_exists(cur, """
+            CREATE TABLE orders (
                 id           INTEGER NOT NULL GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
                 total_amount DECIMAL(10,2) NOT NULL DEFAULT 0.00,
                 status       VARCHAR(50) NOT NULL DEFAULT 'pending',
@@ -693,11 +704,13 @@ def health():
 
 @app.route("/ready")
 def ready():
+    """Readiness probe — single fast connection attempt, no retry."""
     try:
-        with get_db() as conn:
-            cur = conn.cursor()
-            cur.execute("SELECT 1 FROM SYSIBM.SYSDUMMY1")
-            cur.close()
+        conn = ibm_db_dbi.connect(DB2_CONN_STR, "", "")
+        cur = conn.cursor()
+        cur.execute("SELECT 1 FROM SYSIBM.SYSDUMMY1")
+        cur.close()
+        conn.close()
         return jsonify({"status": "ready", "db": "connected"}), 200
     except Exception as exc:
         return jsonify({"status": "not ready", "db": str(exc)}), 503
