@@ -4,20 +4,13 @@ metadata:
   name: db2u-ecommerce
   namespace: ecommerce-demo
 spec:
-  # License: Community Edition (free, no entitlement key required)
-  # Only accept:true is needed — do NOT set license.value for Community edition
-  # license.value expects a real IBM license certificate file content, not a string
   license:
     accept: true
-
-  # Database type and configuration
+    value: "W0xpY2Vuc2VDZXJ0aWZpY2F0ZV0KQ2hlY2tTdW09QzM3Q0RGQUU2RTVDRTMzNTUwMEI0ODc2QzZFNzM0NDQKVGltZVN0YW1wPTE0OTY2NjQ4NjkKUGFzc3dvcmRWZXJzaW9uPTQKVmVuZG9yTmFtZT1JQk0gVG9yb250byBMYWIKVmVuZG9yUGFzc3dvcmQ9N3Y4cDRmcTJkdGZwYwpWZW5kb3JJRD01ZmJlZTBlZTZmZWIuMDIuMDkuMTUuMGYuNDguMDAuMDAuMDAKUHJvZHVjdE5hbWU9ZGFzaERCClByb2R1Y3RJRD0yMDU3ClByb2R1Y3RWZXJzaW9uPTEuMC4wClByb2R1Y3RQYXNzd29yZD01Y24ydHVyOXdqN2huaGs0YWdlc3NhdHAKUHJvZHVjdEFubm90YXRpb249NjsgKF91dykKTGljZW5zZVN0eWxlPW5vZGVsb2NrZWQKTGljZW5zZVN0YXJ0RGF0ZT0wNi8wNS8yMDE3CkxpY2Vuc2VEdXJhdGlvbj03NTE1CkxpY2Vuc2VFbmREYXRlPTEyLzMxLzIwMzcKTGljZW5zZUNvdW50PTEKTXVsdGlVc2VSdWxlcz0KUmVnaXN0cmF0aW9uTGV2ZWw9MwpUcnlBbmRCdXk9Tm8KU29mdFN0b3A9Tm8KVGFyZ2V0VHlwZT1BTlkKVGFyZ2V0VHlwZU5hbWU9T3BlbiBUYXJnZXQKVGFyZ2V0SUQ9QU5ZCkV4dGVuZGVkVGFyZ2V0VHlwZT0KRXh0ZW5kZWRUYXJnZXRJRD0KRGVyaXZlZExpY2Vuc2VTdHlsZT0KRGVyaXZlZExpY2Vuc2VTdGFydERhdGU9CkRlcml2ZWRMaWNlbnNlRW5kRGF0ZT0KRGVyaXZlZExpY2Vuc2VBZ2dyZWdhdGVEdXJhdGlvbj0KU2VyaWFsTnVtYmVyPQpVcGdyYWRlPU5vCkNhcGFjaXR5VHlwZT0KQnVuZGxlPU5vCkluc3RhbGxQcm9ncmFtPQpBZGRpdGlvbmFsTGljZW5zZURhdGE9CkN1c3RvbUF0dHJpYnV0ZTE9Tm8KQ3VzdG9tQXR0cmlidXRlMj1ObwpDdXN0b21BdHRyaWJ1dGUzPU5vClN1YkNhcGFjaXR5RWxpZ2libGVQcm9kdWN0PU5vCk1heE9mZmxpbmVQZXJpb2Q9Cg=="
   environment:
     dbType: db2oltp
     database:
       name: SHOPDB
-    # instance password is managed via Secret: db2u-ecommerce-secret
-
-  # Node affinity: schedule Db2 pods on IBM Power (ppc64le) node
   affinity:
     nodeAffinity:
       requiredDuringSchedulingIgnoredDuringExecution:
@@ -31,15 +24,8 @@ spec:
                 operator: In
                 values:
                   - database
-
-  # Single-node deployment
   size: 1
-
-  # Db2 version
-  # Version must match keys in db2u-release ConfigMap (operator-managed)
   version: "s11.5.9.0-cn7"
-
-  # Resource requests/limits for Db2 engine pod
   podConfig:
     db2u:
       resource:
@@ -50,11 +36,8 @@ spec:
           limits:
             cpu: "4"
             memory: "8Gi"
-
-  # Persistent storage volumes
   storage:
     - name: meta
-      type: create
       spec:
         accessModes:
           - ReadWriteOnce
@@ -62,7 +45,6 @@ spec:
           requests:
             storage: 10Gi
     - name: data
-      type: create
       spec:
         accessModes:
           - ReadWriteOnce
@@ -70,7 +52,6 @@ spec:
           requests:
             storage: 20Gi
     - name: backup
-      type: create
       spec:
         accessModes:
           - ReadWriteOnce
@@ -78,7 +59,6 @@ spec:
           requests:
             storage: 10Gi
     - name: tempts
-      type: create
       spec:
         accessModes:
           - ReadWriteOnce
@@ -86,7 +66,6 @@ spec:
           requests:
             storage: 10Gi
     - name: archivelogs
-      type: create
       spec:
         accessModes:
           - ReadWriteOnce
