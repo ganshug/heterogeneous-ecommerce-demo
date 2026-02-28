@@ -1,3 +1,26 @@
+---
+# =============================================================================
+# IBM Db2uCluster — IBM Db2 instance on IBM Power (ppc64le) node
+#
+# Managed by: IBM Db2 Operator (db2u-operator)
+# Namespace:  ecommerce-demo
+#
+# Node placement: IBM Power (ppc64le) node with workload-type=database label
+#
+# License:
+#   - spec.license.accept: true  (required)
+#   - spec.license.value: base64-encoded content of your IBM Db2 license file (.lic)
+#     The deploy.sh script will inject this automatically when you provide the
+#     license file path via DB2_LICENSE_FILE environment variable or interactive prompt.
+#
+#     To encode manually:
+#       base64 -i /path/to/db2/license.lic
+#
+# Database: SHOPDB (db2oltp type)
+# Service created by operator: c-db2u-ecommerce-db2u-engn-svc:50000
+# Instance user: db2inst1
+# Instance password: auto-generated in secret c-db2u-ecommerce-instancepassword
+# =============================================================================
 apiVersion: db2u.databases.ibm.com/v1
 kind: Db2uCluster
 metadata:
@@ -6,7 +29,9 @@ metadata:
 spec:
   license:
     accept: true
-    value: "W0xpY2Vuc2VDZXJ0aWZpY2F0ZV0KQ2hlY2tTdW09QzM3Q0RGQUU2RTVDRTMzNTUwMEI0ODc2QzZFNzM0NDQKVGltZVN0YW1wPTE0OTY2NjQ4NjkKUGFzc3dvcmRWZXJzaW9uPTQKVmVuZG9yTmFtZT1JQk0gVG9yb250byBMYWIKVmVuZG9yUGFzc3dvcmQ9N3Y4cDRmcTJkdGZwYwpWZW5kb3JJRD01ZmJlZTBlZTZmZWIuMDIuMDkuMTUuMGYuNDguMDAuMDAuMDAKUHJvZHVjdE5hbWU9ZGFzaERCClByb2R1Y3RJRD0yMDU3ClByb2R1Y3RWZXJzaW9uPTEuMC4wClByb2R1Y3RQYXNzd29yZD01Y24ydHVyOXdqN2huaGs0YWdlc3NhdHAKUHJvZHVjdEFubm90YXRpb249NjsgKF91dykKTGljZW5zZVN0eWxlPW5vZGVsb2NrZWQKTGljZW5zZVN0YXJ0RGF0ZT0wNi8wNS8yMDE3CkxpY2Vuc2VEdXJhdGlvbj03NTE1CkxpY2Vuc2VFbmREYXRlPTEyLzMxLzIwMzcKTGljZW5zZUNvdW50PTEKTXVsdGlVc2VSdWxlcz0KUmVnaXN0cmF0aW9uTGV2ZWw9MwpUcnlBbmRCdXk9Tm8KU29mdFN0b3A9Tm8KVGFyZ2V0VHlwZT1BTlkKVGFyZ2V0VHlwZU5hbWU9T3BlbiBUYXJnZXQKVGFyZ2V0SUQ9QU5ZCkV4dGVuZGVkVGFyZ2V0VHlwZT0KRXh0ZW5kZWRUYXJnZXRJRD0KRGVyaXZlZExpY2Vuc2VTdHlsZT0KRGVyaXZlZExpY2Vuc2VTdGFydERhdGU9CkRlcml2ZWRMaWNlbnNlRW5kRGF0ZT0KRGVyaXZlZExpY2Vuc2VBZ2dyZWdhdGVEdXJhdGlvbj0KU2VyaWFsTnVtYmVyPQpVcGdyYWRlPU5vCkNhcGFjaXR5VHlwZT0KQnVuZGxlPU5vCkluc3RhbGxQcm9ncmFtPQpBZGRpdGlvbmFsTGljZW5zZURhdGE9CkN1c3RvbUF0dHJpYnV0ZTE9Tm8KQ3VzdG9tQXR0cmlidXRlMj1ObwpDdXN0b21BdHRyaWJ1dGUzPU5vClN1YkNhcGFjaXR5RWxpZ2libGVQcm9kdWN0PU5vCk1heE9mZmxpbmVQZXJpb2Q9Cg=="
+    # value: injected by deploy.sh from DB2_LICENSE_FILE
+    # Do NOT commit actual license content to git
+    value: "PLACEHOLDER_INJECTED_BY_DEPLOY_SCRIPT"
   environment:
     dbType: db2oltp
     database:

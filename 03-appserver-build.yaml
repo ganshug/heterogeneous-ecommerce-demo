@@ -1,3 +1,4 @@
+---
 # =============================================================================
 # S2I BuildConfig + ImageStream for Shopping Cart App
 #
@@ -5,6 +6,10 @@
 # Base image: registry.redhat.io/ubi9/python-311 (amd64)
 # Build node: pinned to Intel (amd64) via nodeSelector
 # Output: internal ImageStream shop-cart-app:latest
+#
+# Usage (called by deploy.sh):
+#   oc apply -f 03-appserver-build.yaml
+#   oc start-build shop-cart-app --from-dir=./app/ --follow -n ecommerce-demo
 # =============================================================================
 ---
 apiVersion: image.openshift.io/v1
