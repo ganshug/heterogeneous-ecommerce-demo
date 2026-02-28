@@ -1,0 +1,14 @@
+# IBM Db2 Operator Subscription
+# Installs the Db2 Operator from the IBM Operator Catalog
+# The operator manages Db2uCluster instances (Db2 database instances)
+apiVersion: operators.coreos.com/v1alpha1
+kind: Subscription
+metadata:
+  name: ibm-db2u-operator
+  namespace: ecommerce-demo
+spec:
+  channel: v110509.0
+  name: db2u-operator
+  source: ibm-operator-catalog
+  sourceNamespace: openshift-marketplace
+  installPlanApproval: Automatic
