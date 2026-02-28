@@ -1,0 +1,99 @@
+# IBM Db2uCluster — Db2 Database Instance
+# Managed by the IBM Db2 Operator (installed via IBM Operator Catalog)
+#
+# Key heterogeneous placement:
+#   - nodeAffinity: kubernetes.io/arch=ppc64le + workload-type=database
+#   - Db2 runs natively on IBM Power (ppc64le) worker node
+#   - E-Cart app server (x86_64) connects cross-arch via ClusterIP DNS
+#
+# Db2 connection details (used by app server):
+#   Host: c-db2u-ecommerce-db2u-engn-svc.ecommerce-demo.svc.cluster.local
+#   Port: 50000
+#   Database: SHOPDB
+#   User: db2inst1
+#   Password: (set in spec.environment.instance.db2inst.password below)
+#
+# NOTE: IBM Entitlement Key is configured in the OCP global pull secret.
+#       No namespace-level imagePullSecrets needed.
+apiVersion: db2u.databases.ibm.com/v1
+kind: Db2uCluster
+metadata:
+  name: db2u-ecommerce
+  namespace: ecommerce-demo
+spec:
+  license:
+    accept: true
+    license: Community
+  size: 1
+  version: "11.5.9.0"
+  dbType: db2oltp
+  environment:
+    dbConfig:
+      DBNAME: SHOPDB
+    instance:
+      db2inst:
+        password: "Db2Shop2024!"
+  storage:
+    - name: meta
+      spec:
+        accessModes:
+          - ReadWriteOnce
+        resources:
+          requests:
+            storage: 10Gi
+      type: create
+    - name: data
+      spec:
+        accessModes:
+          - ReadWriteOnce
+        resources:
+          requests:
+            storage: 20Gi
+      type: create
+    - name: backup
+      spec:
+        accessModes:
+          - ReadWriteOnce
+        resources:
+          requests:
+            storage: 10Gi
+      type: create
+    - name: tempts
+      spec:
+        accessModes:
+          - ReadWriteOnce
+        resources:
+          requests:
+            storage: 10Gi
+      type: create
+    - name: archivelogs
+      spec:
+        accessModes:
+          - ReadWriteOnce
+        resources:
+          requests:
+            storage: 10Gi
+      type: create
+  podConfig:
+    db2u:
+      resource:
+        db2u:
+          limits:
+            cpu: "4"
+            memory: 8Gi
+          requests:
+            cpu: "2"
+            memory: 4Gi
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+              - matchExpressions:
+                  - key: kubernetes.io/arch
+                    operator: In
+                    values:
+                      - ppc64le
+                  - key: workload-type
+                    operator: In
+                    values:
+                      - database

@@ -1,16 +1,17 @@
 ---
-# NetworkPolicy: Allow Shopping Cart app server to reach Db2 on port 50000
+# NetworkPolicy: Allow Shopping Cart app server to reach Db2u operator pods on port 50000
+# The Db2 Operator creates pods with label: app=db2u-ecommerce (Db2uCluster name)
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
-  name: allow-shopcart-to-db2
-  namespace: db2-shop-demo
+  name: allow-shopcart-to-db2u
+  namespace: ecommerce-demo
   labels:
-    app.kubernetes.io/part-of: hetero-db2-demo
+    app.kubernetes.io/part-of: heterogeneous-ecommerce-demo
 spec:
   podSelector:
     matchLabels:
-      app: db2
+      app: db2u-ecommerce
   policyTypes:
     - Ingress
   ingress:
@@ -29,9 +30,9 @@ apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
   name: allow-ingress-to-shopcart
-  namespace: db2-shop-demo
+  namespace: ecommerce-demo
   labels:
-    app.kubernetes.io/part-of: hetero-db2-demo
+    app.kubernetes.io/part-of: heterogeneous-ecommerce-demo
 spec:
   podSelector:
     matchLabels:

@@ -1,0 +1,16 @@
+# IBM Operator Catalog — CatalogSource
+# Provides access to all IBM operators including IBM Db2 Operator
+# Deploy to openshift-marketplace namespace (cluster-wide catalog)
+apiVersion: operators.coreos.com/v1alpha1
+kind: CatalogSource
+metadata:
+  name: ibm-operator-catalog
+  namespace: openshift-marketplace
+spec:
+  displayName: "IBM Operator Catalog"
+  publisher: IBM
+  sourceType: grpc
+  image: icr.io/cpopen/ibm-operator-catalog
+  updateStrategy:
+    registryPoll:
+      interval: 45m

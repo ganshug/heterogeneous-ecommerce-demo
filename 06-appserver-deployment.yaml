@@ -9,20 +9,26 @@
 # Image: built by OCP S2I BuildConfig (03-appserver-build.yaml)
 #        stored in internal ImageStream: shop-cart-app:latest
 #
-# Database: IBM Db2 Community Edition (02-db2-deployment.yaml) on Power (ppc64le)
-#   Service: db2-service.db2-shop-demo.svc.cluster.local:50000
-#   Credentials: Secret db2-secret
+# Database: IBM Db2 (via Db2 Operator) on Power (ppc64le)
+#   Db2uCluster name: db2u-ecommerce (05-db2u-cluster.yaml)
+#   Service (created by operator): c-db2u-ecommerce-db2u-engn-svc.ecommerce-demo.svc.cluster.local
+#   Port: 50000
+#   Database: SHOPDB
+#   User: db2inst1
+#   Password: Db2Shop2024! (set in Db2uCluster spec)
+#
+# NOTE: No imagePullSecrets — OCP global pull secret has all registry credentials
 # =============================================================================
 apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: shop-cart
-  namespace: db2-shop-demo
+  namespace: ecommerce-demo
   labels:
     app: shop-cart
     tier: appserver
     arch: amd64
-    app.kubernetes.io/part-of: hetero-db2-demo
+    app.kubernetes.io/part-of: heterogeneous-ecommerce-demo
 spec:
   replicas: 1
   selector:
@@ -57,15 +63,16 @@ spec:
                     values:
                       - appserver
       initContainers:
-        # Wait for the Db2 service port to be reachable before starting the app
+        # Wait for the Db2u operator service port to be reachable before starting the app
+        # The Db2 Operator creates service: c-db2u-ecommerce-db2u-engn-svc
         - name: wait-for-db2
           image: image-registry.openshift-image-registry.svc:5000/openshift/cli:latest
           command:
             - bash
             - -c
             - |
-              echo "Waiting for db2-service:50000 to be ready..."
-              until bash -c "echo > /dev/tcp/db2-service/50000" 2>/dev/null; do
+              echo "Waiting for Db2u service c-db2u-ecommerce-db2u-engn-svc:50000 to be ready..."
+              until bash -c "echo > /dev/tcp/c-db2u-ecommerce-db2u-engn-svc/50000" 2>/dev/null; do
                 echo "Db2 not ready yet, sleeping 10s..."
                 sleep 10
               done
@@ -73,33 +80,24 @@ spec:
       containers:
         - name: shop-cart
           # Image built by OCP S2I BuildConfig (03-appserver-build.yaml)
-          # Stored in the internal OCP ImageStream — no docker.io pull needed.
-          image: image-registry.openshift-image-registry.svc:5000/db2-shop-demo/shop-cart-app:latest
+          # Stored in the internal OCP ImageStream — no external registry pull needed.
+          image: image-registry.openshift-image-registry.svc:5000/ecommerce-demo/shop-cart-app:latest
           imagePullPolicy: Always
           ports:
             - containerPort: 8080
               name: http
           env:
-            # Db2 connection parameters from db2-secret
+            # Db2u operator creates service: c-<clustername>-db2u-engn-svc
             - name: DB2_HOST
-              value: "db2-service.db2-shop-demo.svc.cluster.local"
+              value: "c-db2u-ecommerce-db2u-engn-svc.ecommerce-demo.svc.cluster.local"
             - name: DB2_PORT
               value: "50000"
             - name: DB2_DATABASE
-              valueFrom:
-                secretKeyRef:
-                  name: db2-secret
-                  key: DB2_DBNAME
+              value: "SHOPDB"
             - name: DB2_USER
-              valueFrom:
-                secretKeyRef:
-                  name: db2-secret
-                  key: DB2_USER
+              value: "db2inst1"
             - name: DB2_PASSWORD
-              valueFrom:
-                secretKeyRef:
-                  name: db2-secret
-                  key: DB2INST1_PASSWORD
+              value: "Db2Shop2024!"
             # Expose node and pod name inside the app for the /arch endpoint
             - name: NODE_NAME
               valueFrom:
