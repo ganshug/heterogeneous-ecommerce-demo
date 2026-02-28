@@ -5,10 +5,10 @@ metadata:
   namespace: ecommerce-demo
 spec:
   # License: Community Edition (free, no entitlement key required)
+  # Only accept:true is needed — do NOT set license.value for Community edition
+  # license.value expects a real IBM license certificate file content, not a string
   license:
     accept: true
-    # value must be base64-encoded license type
-    value: "Q29tbXVuaXR5"  # base64("Community")
 
   # Database type and configuration
   environment:
