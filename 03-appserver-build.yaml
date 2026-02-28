@@ -1,0 +1,47 @@
+# =============================================================================
+# S2I BuildConfig + ImageStream for Shopping Cart App
+#
+# Builds the Flask e-commerce app from source using OCP Source-to-Image (S2I)
+# Base image: registry.redhat.io/ubi9/python-311 (amd64)
+# Build node: pinned to Intel (amd64) via nodeSelector
+# Output: internal ImageStream shop-cart-app:latest
+# =============================================================================
+---
+apiVersion: image.openshift.io/v1
+kind: ImageStream
+metadata:
+  name: shop-cart-app
+  namespace: ecommerce-demo
+  labels:
+    app: shop-cart
+    tier: appserver
+spec:
+  lookupPolicy:
+    local: true
+---
+apiVersion: build.openshift.io/v1
+kind: BuildConfig
+metadata:
+  name: shop-cart-app
+  namespace: ecommerce-demo
+  labels:
+    app: shop-cart
+    tier: appserver
+spec:
+  source:
+    type: Binary
+    binary: {}
+  strategy:
+    type: Docker
+    dockerStrategy:
+      dockerfilePath: Dockerfile
+      noCache: false
+      # Pin build to amd64 node (Intel) — app must run on x86_64
+      nodeSelector:
+        kubernetes.io/arch: amd64
+  output:
+    to:
+      kind: ImageStreamTag
+      name: shop-cart-app:latest
+  triggers: []
+  runPolicy: Serial

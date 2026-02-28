@@ -6,10 +6,9 @@ Flask==3.0.3
 gunicorn==22.0.0
 
 # IBM Db2 Python driver
-# ibm_db provides the low-level C extension for Db2 connectivity
-# ibm_db_dbi provides the PEP-249 DB-API 2.0 interface
+# ibm_db provides both the low-level C extension AND the PEP-249 DB-API 2.0 interface
+# ibm_db_dbi is bundled inside ibm_db — do NOT list it separately on PyPI
 ibm_db==3.2.3
-ibm_db_dbi==3.2.3
 
 # Utilities
 Werkzeug==3.0.3
