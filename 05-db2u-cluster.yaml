@@ -1,99 +1,95 @@
-# IBM Db2uCluster — Db2 Database Instance
-# Managed by the IBM Db2 Operator (installed via IBM Operator Catalog)
-#
-# Key heterogeneous placement:
-#   - nodeAffinity: kubernetes.io/arch=ppc64le + workload-type=database
-#   - Db2 runs natively on IBM Power (ppc64le) worker node
-#   - E-Cart app server (x86_64) connects cross-arch via ClusterIP DNS
-#
-# Db2 connection details (used by app server):
-#   Host: c-db2u-ecommerce-db2u-engn-svc.ecommerce-demo.svc.cluster.local
-#   Port: 50000
-#   Database: SHOPDB
-#   User: db2inst1
-#   Password: (set in spec.environment.instance.db2inst.password below)
-#
-# NOTE: IBM Entitlement Key is configured in the OCP global pull secret.
-#       No namespace-level imagePullSecrets needed.
 apiVersion: db2u.databases.ibm.com/v1
 kind: Db2uCluster
 metadata:
   name: db2u-ecommerce
   namespace: ecommerce-demo
 spec:
+  # License: Community Edition (free, no entitlement key required)
   license:
     accept: true
-    license: Community
-  size: 1
-  version: "11.5.9.0"
-  dbType: db2oltp
+    # value must be base64-encoded license type
+    value: "Q29tbXVuaXR5"  # base64("Community")
+
+  # Database type and configuration
   environment:
-    dbConfig:
-      DBNAME: SHOPDB
-    instance:
-      db2inst:
-        password: "Db2Shop2024!"
+    dbType: db2oltp
+    database:
+      name: SHOPDB
+    # instance password is managed via Secret: db2u-ecommerce-secret
+
+  # Node affinity: schedule Db2 pods on IBM Power (ppc64le) node
+  affinity:
+    nodeAffinity:
+      requiredDuringSchedulingIgnoredDuringExecution:
+        nodeSelectorTerms:
+          - matchExpressions:
+              - key: kubernetes.io/arch
+                operator: In
+                values:
+                  - ppc64le
+              - key: workload-type
+                operator: In
+                values:
+                  - database
+
+  # Single-node deployment
+  size: 1
+
+  # Db2 version
+  # Version must match keys in db2u-release ConfigMap (operator-managed)
+  version: "s11.5.9.0-cn7"
+
+  # Resource requests/limits for Db2 engine pod
+  podConfig:
+    db2u:
+      resource:
+        db2u:
+          requests:
+            cpu: "2"
+            memory: "4Gi"
+          limits:
+            cpu: "4"
+            memory: "8Gi"
+
+  # Persistent storage volumes
   storage:
     - name: meta
+      type: create
       spec:
         accessModes:
           - ReadWriteOnce
         resources:
           requests:
             storage: 10Gi
-      type: create
     - name: data
+      type: create
       spec:
         accessModes:
           - ReadWriteOnce
         resources:
           requests:
             storage: 20Gi
-      type: create
     - name: backup
+      type: create
       spec:
         accessModes:
           - ReadWriteOnce
         resources:
           requests:
             storage: 10Gi
-      type: create
     - name: tempts
+      type: create
       spec:
         accessModes:
           - ReadWriteOnce
         resources:
           requests:
             storage: 10Gi
-      type: create
     - name: archivelogs
+      type: create
       spec:
         accessModes:
           - ReadWriteOnce
         resources:
           requests:
             storage: 10Gi
-      type: create
-  podConfig:
-    db2u:
-      resource:
-        db2u:
-          limits:
-            cpu: "4"
-            memory: 8Gi
-          requests:
-            cpu: "2"
-            memory: 4Gi
-      affinity:
-        nodeAffinity:
-          requiredDuringSchedulingIgnoredDuringExecution:
-            nodeSelectorTerms:
-              - matchExpressions:
-                  - key: kubernetes.io/arch
-                    operator: In
-                    values:
-                      - ppc64le
-                  - key: workload-type
-                    operator: In
-                    values:
-                      - database
