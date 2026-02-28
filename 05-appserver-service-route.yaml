@@ -1,0 +1,41 @@
+---
+# ClusterIP Service for the Shopping Cart App Server
+apiVersion: v1
+kind: Service
+metadata:
+  name: shop-cart-service
+  namespace: db2-shop-demo
+  labels:
+    app: shop-cart
+    tier: appserver
+    app.kubernetes.io/part-of: hetero-db2-demo
+spec:
+  type: ClusterIP
+  selector:
+    app: shop-cart
+  ports:
+    - name: http
+      port: 8080
+      targetPort: 8080
+      protocol: TCP
+---
+# OpenShift Route — exposes the Shopping Cart app externally via the OCP ingress router
+apiVersion: route.openshift.io/v1
+kind: Route
+metadata:
+  name: shop-cart-route
+  namespace: db2-shop-demo
+  labels:
+    app: shop-cart
+    app.kubernetes.io/part-of: hetero-db2-demo
+spec:
+  to:
+    kind: Service
+    name: shop-cart-service
+    weight: 100
+  port:
+    targetPort: http
+  tls:
+    termination: edge
+    insecureEdgeTerminationPolicy: Redirect
+  wildcardPolicy: None

@@ -1,0 +1,141 @@
+---
+# =============================================================================
+# Shopping Cart App Server Deployment — pinned to Intel (amd64) node
+#
+# Placement strategy:
+#   nodeAffinity: requiredDuringScheduling — MUST run on amd64 (Intel)
+#                 workload-type=appserver  (set by 01-node-labels-taints.sh)
+#
+# Image: built by OCP S2I BuildConfig (03-appserver-build.yaml)
+#        stored in internal ImageStream: shop-cart-app:latest
+#
+# Database: IBM Db2 Community Edition (02-db2-deployment.yaml) on Power (ppc64le)
+#   Service: db2-service.db2-shop-demo.svc.cluster.local:50000
+#   Credentials: Secret db2-secret
+# =============================================================================
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: shop-cart
+  namespace: db2-shop-demo
+  labels:
+    app: shop-cart
+    tier: appserver
+    arch: amd64
+    app.kubernetes.io/part-of: hetero-db2-demo
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: shop-cart
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  template:
+    metadata:
+      labels:
+        app: shop-cart
+        tier: appserver
+        arch: amd64
+    spec:
+      # -----------------------------------------------------------------------
+      # Hard node affinity: MUST run on amd64 (Intel) node
+      # -----------------------------------------------------------------------
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+              - matchExpressions:
+                  - key: kubernetes.io/arch
+                    operator: In
+                    values:
+                      - amd64
+                  - key: workload-type
+                    operator: In
+                    values:
+                      - appserver
+      initContainers:
+        # Wait for the Db2 service port to be reachable before starting the app
+        - name: wait-for-db2
+          image: image-registry.openshift-image-registry.svc:5000/openshift/cli:latest
+          command:
+            - bash
+            - -c
+            - |
+              echo "Waiting for db2-service:50000 to be ready..."
+              until bash -c "echo > /dev/tcp/db2-service/50000" 2>/dev/null; do
+                echo "Db2 not ready yet, sleeping 10s..."
+                sleep 10
+              done
+              echo "Db2 is ready!"
+      containers:
+        - name: shop-cart
+          # Image built by OCP S2I BuildConfig (03-appserver-build.yaml)
+          # Stored in the internal OCP ImageStream — no docker.io pull needed.
+          image: image-registry.openshift-image-registry.svc:5000/db2-shop-demo/shop-cart-app:latest
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 8080
+              name: http
+          env:
+            # Db2 connection parameters from db2-secret
+            - name: DB2_HOST
+              value: "db2-service.db2-shop-demo.svc.cluster.local"
+            - name: DB2_PORT
+              value: "50000"
+            - name: DB2_DATABASE
+              valueFrom:
+                secretKeyRef:
+                  name: db2-secret
+                  key: DB2_DBNAME
+            - name: DB2_USER
+              valueFrom:
+                secretKeyRef:
+                  name: db2-secret
+                  key: DB2_USER
+            - name: DB2_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: db2-secret
+                  key: DB2INST1_PASSWORD
+            # Expose node and pod name inside the app for the /arch endpoint
+            - name: NODE_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: spec.nodeName
+            - name: POD_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+          resources:
+            requests:
+              cpu: "250m"
+              memory: "256Mi"
+            limits:
+              cpu: "1"
+              memory: "512Mi"
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8080
+            initialDelaySeconds: 30
+            periodSeconds: 10
+            failureThreshold: 3
+          readinessProbe:
+            httpGet:
+              path: /ready
+              port: 8080
+            initialDelaySeconds: 15
+            periodSeconds: 5
+            failureThreshold: 3
+          startupProbe:
+            httpGet:
+              path: /health
+              port: 8080
+            initialDelaySeconds: 15
+            periodSeconds: 5
+            failureThreshold: 20
+      terminationGracePeriodSeconds: 30
+      serviceAccountName: default

@@ -1,0 +1,212 @@
+---
+# =============================================================================
+# IBM Db2 Community Edition — pinned to Power (ppc64le) node
+#
+# Image: cp.icr.io/cp/db2/db2u:latest
+#   IBM Db2 Universal Database — multi-arch image (amd64 + ppc64le)
+#   Pulled from IBM Container Registry (cp.icr.io)
+#   IBM Entitlement Key is configured in the OCP global pull secret — no
+#   namespace-level imagePullSecrets needed.
+#
+# Placement: pinned to Power (ppc64le) node via nodeAffinity
+#            workload-type=database label (set by 01-node-labels-taints.sh)
+#
+# Port: 50000 (Db2 default)
+# =============================================================================
+
+# Secret: Db2 database credentials
+apiVersion: v1
+kind: Secret
+metadata:
+  name: db2-secret
+  namespace: db2-shop-demo
+  labels:
+    app: db2
+    tier: database
+    arch: ppc64le
+    app.kubernetes.io/part-of: hetero-db2-demo
+type: Opaque
+stringData:
+  DB2INST1_PASSWORD: "Db2ShopDemo2024!"
+  DB2_DBNAME: "shopdb"
+  DB2_USER: "db2inst1"
+  # Connection string for the shopping cart app
+  DB2_URL: "db2://db2inst1:Db2ShopDemo2024!@db2-service.db2-shop-demo.svc.cluster.local:50000/shopdb"
+
+---
+# PersistentVolumeClaim for Db2 data
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: db2-data-pvc
+  namespace: db2-shop-demo
+  labels:
+    app: db2
+    tier: database
+    arch: ppc64le
+    app.kubernetes.io/part-of: hetero-db2-demo
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 20Gi
+
+---
+# IBM Db2 Deployment — pinned to Power (ppc64le) node
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: db2
+  namespace: db2-shop-demo
+  labels:
+    app: db2
+    tier: database
+    arch: ppc64le
+    app.kubernetes.io/part-of: hetero-db2-demo
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: db2
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      labels:
+        app: db2
+        tier: database
+        arch: ppc64le
+    spec:
+      # -----------------------------------------------------------------------
+      # Hard node affinity: MUST run on ppc64le (IBM Power) node
+      # -----------------------------------------------------------------------
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+              - matchExpressions:
+                  - key: kubernetes.io/arch
+                    operator: In
+                    values:
+                      - ppc64le
+                  - key: workload-type
+                    operator: In
+                    values:
+                      - database
+      # IBM Entitlement Key is in the OCP global pull secret — no imagePullSecrets needed here.
+      # Db2 requires privileged access for kernel parameter tuning
+      securityContext:
+        runAsUser: 0
+      initContainers:
+        # Db2 requires certain kernel parameters to be set
+        - name: init-kernel-params
+          image: cp.icr.io/cp/db2/db2u:latest
+          imagePullPolicy: IfNotPresent
+          command:
+            - sh
+            - -c
+            - |
+              sysctl -w kernel.msgmnb=65536 || true
+              sysctl -w kernel.msgmax=65536 || true
+              sysctl -w kernel.shmmax=68719476736 || true
+              sysctl -w kernel.shmmni=32768 || true
+              sysctl -w kernel.shmall=4294967296 || true
+              sysctl -w kernel.sem="250 1024000 32 4096" || true
+              echo "Kernel parameters set."
+          securityContext:
+            privileged: true
+      containers:
+        - name: db2
+          # cp.icr.io/cp/db2/db2u is a multi-arch image (amd64 + ppc64le)
+          # On ppc64le node, the ppc64le variant is pulled automatically.
+          # IBM Entitlement Key is in the OCP global pull secret.
+          image: cp.icr.io/cp/db2/db2u:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 50000
+              name: db2
+            - containerPort: 55000
+              name: db2-ssl
+          env:
+            - name: LICENSE
+              value: "accept"
+            - name: DB2INST1_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: db2-secret
+                  key: DB2INST1_PASSWORD
+            - name: DBNAME
+              valueFrom:
+                secretKeyRef:
+                  name: db2-secret
+                  key: DB2_DBNAME
+            - name: ARCHIVE_LOGS
+              value: "false"
+            - name: AUTOCONFIG
+              value: "false"
+          volumeMounts:
+            - name: db2-data
+              mountPath: /database
+          resources:
+            requests:
+              cpu: "500m"
+              memory: "2Gi"
+            limits:
+              cpu: "2"
+              memory: "4Gi"
+          securityContext:
+            privileged: true
+          livenessProbe:
+            exec:
+              command:
+                - sh
+                - -c
+                - "su - db2inst1 -c 'db2 connect to shopdb && db2 disconnect shopdb' 2>/dev/null || exit 1"
+            initialDelaySeconds: 300
+            periodSeconds: 30
+            failureThreshold: 5
+            timeoutSeconds: 30
+          readinessProbe:
+            tcpSocket:
+              port: 50000
+            initialDelaySeconds: 120
+            periodSeconds: 15
+            failureThreshold: 10
+            timeoutSeconds: 10
+          startupProbe:
+            tcpSocket:
+              port: 50000
+            initialDelaySeconds: 60
+            periodSeconds: 15
+            failureThreshold: 20
+      volumes:
+        - name: db2-data
+          persistentVolumeClaim:
+            claimName: db2-data-pvc
+
+---
+# Service for IBM Db2 — accessible as db2-service:50000
+apiVersion: v1
+kind: Service
+metadata:
+  name: db2-service
+  namespace: db2-shop-demo
+  labels:
+    app: db2
+    tier: database
+    arch: ppc64le
+    app.kubernetes.io/part-of: hetero-db2-demo
+spec:
+  selector:
+    app: db2
+  ports:
+    - name: db2
+      port: 50000
+      targetPort: 50000
+      protocol: TCP
+    - name: db2-ssl
+      port: 55000
+      targetPort: 55000
+      protocol: TCP
+  type: ClusterIP

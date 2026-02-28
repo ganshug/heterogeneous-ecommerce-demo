@@ -1,0 +1,44 @@
+---
+# NetworkPolicy: Allow Shopping Cart app server to reach Db2 on port 50000
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-shopcart-to-db2
+  namespace: db2-shop-demo
+  labels:
+    app.kubernetes.io/part-of: hetero-db2-demo
+spec:
+  podSelector:
+    matchLabels:
+      app: db2
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              app: shop-cart
+      ports:
+        - protocol: TCP
+          port: 50000
+        - protocol: TCP
+          port: 55000
+---
+# NetworkPolicy: Allow external ingress traffic to Shopping Cart app on port 8080
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-ingress-to-shopcart
+  namespace: db2-shop-demo
+  labels:
+    app.kubernetes.io/part-of: hetero-db2-demo
+spec:
+  podSelector:
+    matchLabels:
+      app: shop-cart
+  policyTypes:
+    - Ingress
+  ingress:
+    - ports:
+        - protocol: TCP
+          port: 8080

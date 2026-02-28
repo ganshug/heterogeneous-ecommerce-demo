@@ -1,0 +1,8 @@
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: db2-shop-demo
+  labels:
+    app.kubernetes.io/part-of: hetero-db2-demo
+    demo: heterogeneous-ocp
